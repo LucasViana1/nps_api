@@ -1,0 +1,46 @@
+import { Request, Response } from 'express';
+import { getCustomRepository, Not, IsNull } from 'typeorm';
+import SurveysUsersRepository from '../repositories/SurveysUsersRepository';
+
+interface ISurvey {
+  value: number;
+}
+
+class NpsController {
+  async execute(request: Request, response: Response) {
+    const { survey_id } = request.params;
+
+    const surveyUsersRepository = getCustomRepository(SurveysUsersRepository);
+
+    const surveyUsers = await surveyUsersRepository.find({
+      survey_id,
+      value: Not(IsNull())
+    });
+
+    const detractor = surveyUsers.filter(
+      (survey: ISurvey) => survey.value >= 0 && survey.value <= 6
+    ).length;
+
+    const promoters = surveyUsers.filter(
+      (survey: ISurvey) => survey.value >= 9 && survey.value <= 10
+    ).length;
+
+    const passive = surveyUsers.filter(
+      (survey: ISurvey) => survey.value >= 7 && survey.value <= 8
+    ).length;
+
+    const totalAnswers = surveyUsers.length;
+
+    const calculate = Number((((promoters - detractor) / totalAnswers) * 100).toFixed(2));
+
+    return response.json({
+      detractor,
+      promoters,
+      passive,
+      totalAnswers,
+      nps: calculate
+    });
+  }
+}
+
+export default NpsController;
